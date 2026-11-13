@@ -12,13 +12,31 @@ export async function resolveTenantSlug(): Promise<string> {
 
   if (xTenant) return xTenant.toLowerCase();
 
-  // Parse subdomain
-  // e.g., cherukavu.sportsmeet.com or cherukavu.localhost:3000
-  const parts = host.split(':')[0].split('.');
-  if (parts.length >= 2) {
+  const cleanHost = host.split(':')[0].toLowerCase();
+  const parts = cleanHost.split('.');
+
+  // If running on Vercel (e.g. sports-meet-beta-ph5gkh3kk-ameen-6962.vercel.app or sports-meet-beta.vercel.app)
+  if (cleanHost.includes('vercel.app')) {
+    // Only if there are 4 or more parts (e.g. cherukavu.sports-meet-beta.vercel.app), parts[0] is the tenant
+    if (parts.length > 3) {
+      return parts[0];
+    }
+    return 'cherukavu'; // Default for the root Vercel app
+  }
+
+  // Localhost (e.g. cherukavu.localhost:3000)
+  if (cleanHost.includes('localhost')) {
+    if (parts.length >= 2 && parts[0] !== 'localhost') {
+      return parts[0];
+    }
+    return 'cherukavu';
+  }
+
+  // Custom domain (e.g. cherukavu.sportsmeet.online has 3 parts: cherukavu, sportsmeet, online)
+  if (parts.length >= 3) {
     const subdomain = parts[0];
-    if (subdomain !== 'www' && subdomain !== 'localhost' && subdomain !== 'sportsmeet') {
-      return subdomain.toLowerCase();
+    if (subdomain !== 'www') {
+      return subdomain;
     }
   }
 

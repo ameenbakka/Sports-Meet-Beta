@@ -8,10 +8,26 @@ export function middleware(request: NextRequest) {
   // 1. Resolve Tenant Slug
   let tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) {
-    const parts = host.split(':')[0].split('.');
-    if (parts.length >= 2) {
-      const sub = parts[0].toLowerCase();
-      if (sub !== 'www' && sub !== 'localhost' && sub !== 'sportsmeet') {
+    const cleanHost = host.split(':')[0].toLowerCase();
+    const parts = cleanHost.split('.');
+
+    if (cleanHost.includes('vercel.app')) {
+      // e.g. <subdomain>.<project>.vercel.app (4 parts)
+      if (parts.length > 3) {
+        tenantSlug = parts[0];
+      } else {
+        tenantSlug = 'cherukavu';
+      }
+    } else if (cleanHost.includes('localhost')) {
+      if (parts.length >= 2 && parts[0] !== 'localhost') {
+        tenantSlug = parts[0];
+      } else {
+        tenantSlug = 'cherukavu';
+      }
+    } else if (parts.length >= 3) {
+      // e.g. <subdomain>.sportsmeet.online (3 parts)
+      const sub = parts[0];
+      if (sub !== 'www') {
         tenantSlug = sub;
       }
     }
