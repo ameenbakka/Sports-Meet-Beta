@@ -10,17 +10,28 @@ import { Trophy, Users, Flame, CalendarCheck, ArrowRight, ShieldCheck } from 'lu
 export default function LandingPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
   const fetchStats = () => {
     fetch('/api/public/stats')
-      .then((res) => (res.ok ? res.json() : null))
+      .then(async (res) => {
+        const resData = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(resData?.error || 'Database connection error');
+        }
+        return resData;
+      })
       .then((resData) => {
-        if (resData) setData(resData);
+        if (resData) {
+          setData(resData);
+          setDbError(null);
+        }
         setLoading(false);
       })
       .catch((err) => {
         console.error('Error fetching stats:', err);
+        setDbError(err.message);
         setLoading(false);
       });
   };
@@ -52,6 +63,14 @@ export default function LandingPage() {
         subtitle={tenant.subtitle}
         onOpenRegisterModal={() => setIsRegisterModalOpen(true)}
       />
+
+      {/* Database Diagnostic Warning (If MONGODB_URI not set or unreachable) */}
+      {dbError && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-3 text-amber-900 text-xs text-center flex flex-col sm:flex-row items-center justify-center gap-2">
+          <span className="font-bold">⚠️ Database Setup Notice:</span>
+          <span>{dbError}</span>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-blue-900 via-indigo-950 to-slate-900 text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 shadow-inner">

@@ -24,7 +24,10 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({
+        error: 'Unable to communicate with the authentication server. Please check database configuration.',
+      }));
+
       if (!res.ok) {
         throw new Error(data.error || 'Failed to login');
       }
@@ -32,7 +35,7 @@ export default function LoginPage() {
       router.push(data.redirectUrl || '/');
       router.refresh();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Login failed.');
     } finally {
       setLoading(false);
     }

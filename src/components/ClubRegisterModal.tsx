@@ -36,14 +36,17 @@ export default function ClubRegisterModal({ isOpen, onClose }: ClubRegisterModal
         body: JSON.stringify(formData),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({
+        error: 'Unable to communicate with the server. Please check database connection.',
+      }));
+
       if (!res.ok) {
         throw new Error(data.error || 'Failed to submit registration');
       }
 
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'An unexpected error occurred during submission.');
     } finally {
       setLoading(false);
     }
