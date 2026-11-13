@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
-import { MeetSettings } from '@/lib/models/MeetSettings';
 import { Club } from '@/lib/models/Club';
 import { ensureInitialized } from '@/lib/seed';
 
@@ -12,21 +11,26 @@ export async function GET() {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    await connectDB();
-    const settings = await ensureInitialized();
-
+    let settings = null;
     let club = null;
-    if (session.clubId) {
-      club = await Club.findById(session.clubId);
+
+    try {
+      await connectDB();
+      settings = await ensureInitialized();
+      if (session.clubId) {
+        club = await Club.findById(session.clubId);
+      }
+    } catch (dbErr) {
+      console.error('Database warning in /api/auth/me:', dbErr);
     }
 
     return NextResponse.json({
       authenticated: true,
       user: session,
       settings: {
-        name: settings.name,
-        subtitle: settings.subtitle,
-        eventYear: settings.eventYear,
+        name: settings?.name || 'ചെറുകാവ് ഗ്രാമപഞ്ചായത്ത് കേരളോത്സവം 2024',
+        subtitle: settings?.subtitle || 'Sports & Athletic Championship',
+        eventYear: settings?.eventYear || '2024-25',
       },
       club,
     });

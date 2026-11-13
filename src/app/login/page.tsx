@@ -32,8 +32,8 @@ export default function LoginPage() {
         throw new Error(data.error || 'Failed to login');
       }
 
-      router.push(data.redirectUrl || '/');
-      router.refresh();
+      // Hard redirect to guarantee cookie is committed and prevent immediate logout
+      window.location.href = data.redirectUrl || '/';
     } catch (err: any) {
       setError(err.message || 'Login failed.');
     } finally {

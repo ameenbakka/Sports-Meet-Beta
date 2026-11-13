@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Trophy,
   Users,
@@ -17,8 +17,8 @@ import {
 
 export default function ClubLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -26,18 +26,25 @@ export default function ClubLayout({ children }: { children: React.ReactNode }) 
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!data || !data.authenticated || data.user.role !== 'CLUB_MANAGER') {
-          router.push('/login');
+          window.location.href = '/login';
         } else {
           setSession(data);
+          setLoading(false);
         }
       })
-      .catch(() => router.push('/login'));
-  }, [router]);
+      .catch(() => {
+        window.location.href = '/login';
+      });
+  }, []);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-    router.refresh();
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    // Hard redirect to clear router cache and cookies completely
+    window.location.href = '/login';
   };
 
   const navItems = [
@@ -46,6 +53,17 @@ export default function ClubLayout({ children }: { children: React.ReactNode }) 
     { name: 'Event Enrollments', href: '/club/events', icon: Calendar },
     { name: 'Grievance / Appeals', href: '/club/appeals', icon: AlertTriangle },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs font-semibold text-slate-500">Verifying Club Session...</p>
+        </div>
+      </div>
+    );
+  }
 
   const club = session?.club;
 
@@ -157,6 +175,16 @@ export default function ClubLayout({ children }: { children: React.ReactNode }) 
             <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center">
               {club?.code?.slice(0, 2) || 'CL'}
             </div>
+
+            {/* Direct Sign Out Button in Header (always visible on mobile & desktop) */}
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition shadow-sm"
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
           </div>
         </header>
 
