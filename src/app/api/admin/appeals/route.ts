@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Appeal } from '@/lib/models/Appeal';
-import { getSession } from '@/lib/auth';
+import { getSession, isAdminRole } from '@/lib/auth';
 import '@/lib/models/Event';
 import '@/lib/models/Club';
 import '@/lib/models/Participant';
@@ -9,7 +9,7 @@ import '@/lib/models/Participant';
 export async function GET() {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
+    if (!session || !isAdminRole(session.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -29,7 +29,7 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
+    if (!session || !isAdminRole(session.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

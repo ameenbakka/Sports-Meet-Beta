@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { EventModel } from '@/lib/models/Event';
 import { Category } from '@/lib/models/Category';
-import { getSession } from '@/lib/auth';
+import { getSession, isAdminRole } from '@/lib/auth';
 
 export async function GET() {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
+    if (!session || !isAdminRole(session.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -29,7 +29,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
+    if (!session || !isAdminRole(session.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
+    if (!session || !isAdminRole(session.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

@@ -26,7 +26,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     fetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!data || !data.authenticated || data.user.role !== 'ADMIN') {
+        const isAdmin =
+          data?.user?.role === 'ADMIN' ||
+          data?.user?.role === 'TENANT_ADMIN' ||
+          data?.user?.role === 'SUPER_ADMIN';
+
+        if (!data || !data.authenticated || !isAdmin) {
           window.location.href = '/login';
         } else {
           setSession(data);

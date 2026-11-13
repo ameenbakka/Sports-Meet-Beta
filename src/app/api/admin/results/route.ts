@@ -3,12 +3,12 @@ import { connectDB } from '@/lib/db';
 import { Result } from '@/lib/models/Result';
 import { EventModel } from '@/lib/models/Event';
 import { recalculateAllClubPoints } from '@/lib/points';
-import { getSession } from '@/lib/auth';
+import { getSession, isAdminRole } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
+    if (!session || !isAdminRole(session.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
+    if (!session || !isAdminRole(session.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

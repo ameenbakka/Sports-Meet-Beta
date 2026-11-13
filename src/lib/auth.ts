@@ -40,6 +40,10 @@ export async function getSession(): Promise<AuthSession | null> {
   return verifyToken(token);
 }
 
+export function isAdminRole(role?: string): boolean {
+  return role === 'ADMIN' || role === 'TENANT_ADMIN' || role === 'SUPER_ADMIN';
+}
+
 export function generateRandomPassword(length = 8): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#';
   let password = '';

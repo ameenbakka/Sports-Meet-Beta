@@ -19,7 +19,7 @@ export async function ensureInitialized() {
     });
   }
 
-  // 2. Ensure Admin user exists
+  // 2. Ensure Admin user exists with role ADMIN and Admin@123 password
   const existingAdmin = await User.findOne({ username: 'admin' });
   if (!existingAdmin) {
     const passwordHash = await hashPassword('Admin@123');
@@ -31,6 +31,12 @@ export async function ensureInitialized() {
       passwordHash,
       isActive: true,
     });
+  } else {
+    // If admin already exists from previous multi-tenant schema, normalize to ADMIN
+    if (existingAdmin.role !== 'ADMIN') {
+      existingAdmin.role = 'ADMIN';
+      await existingAdmin.save();
+    }
   }
 
   // 3. Ensure Default Categories exist
