@@ -5,7 +5,6 @@ export type EventGender = 'MALE' | 'FEMALE' | 'MIXED';
 export type EventStatus = 'SCHEDULED' | 'ONGOING' | 'COMPLETED';
 
 export interface IEvent extends Document {
-  tenantId: mongoose.Types.ObjectId;
   categoryId: mongoose.Types.ObjectId;
   name: string;
   code?: string;
@@ -27,7 +26,6 @@ export interface IEvent extends Document {
 
 const EventSchema = new Schema<IEvent>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category', required: true, index: true },
     name: { type: String, required: true, trim: true },
     code: { type: String, uppercase: true, trim: true },

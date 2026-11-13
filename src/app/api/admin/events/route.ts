@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
 import { EventModel } from '@/lib/models/Event';
 import { Category } from '@/lib/models/Category';
 import { getSession } from '@/lib/auth';
@@ -8,19 +7,17 @@ import { getSession } from '@/lib/auth';
 export async function GET() {
   try {
     const session = await getSession();
-    if (!session || (session.role !== 'TENANT_ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
-
     const [events, categories] = await Promise.all([
-      EventModel.find({ tenantId: tenant._id })
+      EventModel.find()
         .populate('categoryId')
         .sort({ orderIndex: 1, createdAt: -1 })
         .lean(),
-      Category.find({ tenantId: tenant._id }).sort({ displayOrder: 1 }).lean(),
+      Category.find().sort({ displayOrder: 1 }).lean(),
     ]);
 
     return NextResponse.json({ events, categories });
@@ -32,12 +29,11 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== 'TENANT_ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
     const body = await req.json();
 
     const {
@@ -59,8 +55,8 @@ export async function POST(req: NextRequest) {
 
     if (id) {
       // Update
-      const updated = await EventModel.findOneAndUpdate(
-        { _id: id, tenantId: tenant._id },
+      const updated = await EventModel.findByIdAndUpdate(
+        id,
         {
           name: name.trim(),
           categoryId,
@@ -79,7 +75,6 @@ export async function POST(req: NextRequest) {
 
     // Create
     const created = await EventModel.create({
-      tenantId: tenant._id,
       name: name.trim(),
       categoryId,
       type: type || 'INDIVIDUAL',
@@ -100,12 +95,11 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== 'TENANT_ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
@@ -113,7 +107,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Event ID required' }, { status: 400 });
     }
 
-    await EventModel.findOneAndDelete({ _id: id, tenantId: tenant._id });
+    await EventModel.findByIdAndDelete(id);
 
     return NextResponse.json({ success: true, message: 'Event deleted' });
   } catch (error: any) {

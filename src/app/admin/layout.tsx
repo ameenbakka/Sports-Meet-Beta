@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     fetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!data || !data.authenticated || (data.user.role !== 'TENANT_ADMIN' && data.user.role !== 'SUPER_ADMIN')) {
+        if (!data || !data.authenticated || data.user.role !== 'ADMIN') {
           router.push('/login');
         } else {
           setSession(data);
@@ -75,7 +75,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <div>
                 <span className="font-bold text-sm tracking-wide">Sports Admin</span>
                 <span className="block text-[10px] text-blue-400 font-mono">
-                  {session?.tenant?.slug || 'Portal'}
+                  {session?.settings?.eventYear || 'Portal'}
                 </span>
               </div>
             </div>
@@ -141,7 +141,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Menu className="w-5 h-5" />
             </button>
             <h2 className="text-base font-bold text-slate-800 truncate">
-              {session?.tenant?.name || 'Sports Meet Admin'}
+              {session?.settings?.name || 'Sports Meet Admin'}
             </h2>
           </div>
 

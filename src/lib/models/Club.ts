@@ -3,7 +3,6 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export type ClubStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface IClub extends Document {
-  tenantId: mongoose.Types.ObjectId;
   name: string;
   code: string;
   convenerName: string;
@@ -27,9 +26,8 @@ export interface IClub extends Document {
 
 const ClubSchema = new Schema<IClub>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
     name: { type: String, required: true, trim: true },
-    code: { type: String, required: true, uppercase: true, trim: true },
+    code: { type: String, required: true, unique: true, uppercase: true, trim: true },
     convenerName: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     email: { type: String, trim: true, lowercase: true },
@@ -53,8 +51,6 @@ const ClubSchema = new Schema<IClub>(
   },
   { timestamps: true }
 );
-
-ClubSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 
 export const Club: Model<IClub> =
   mongoose.models.Club || mongoose.model<IClub>('Club', ClubSchema);

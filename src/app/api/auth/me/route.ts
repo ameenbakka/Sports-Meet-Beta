@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
+import { MeetSettings } from '@/lib/models/MeetSettings';
 import { Club } from '@/lib/models/Club';
+import { ensureInitialized } from '@/lib/seed';
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
+    const settings = await ensureInitialized();
 
     let club = null;
     if (session.clubId) {
@@ -22,10 +23,10 @@ export async function GET() {
     return NextResponse.json({
       authenticated: true,
       user: session,
-      tenant: {
-        name: tenant.name,
-        slug: tenant.slug,
-        subtitle: tenant.subtitle,
+      settings: {
+        name: settings.name,
+        subtitle: settings.subtitle,
+        eventYear: settings.eventYear,
       },
       club,
     });

@@ -7,7 +7,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'sports-meet-super-secret-jwt-key-2
 
 export interface AuthSession {
   userId: string;
-  tenantId: string;
   username: string;
   role: UserRole;
   clubId?: string;

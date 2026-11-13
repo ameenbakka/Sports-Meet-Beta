@@ -1,9 +1,8 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-export type UserRole = 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'CLUB_MANAGER';
+export type UserRole = 'ADMIN' | 'CLUB_MANAGER';
 
 export interface IUser extends Document {
-  tenantId: mongoose.Types.ObjectId;
   username: string;
   passwordHash: string;
   role: UserRole;
@@ -18,12 +17,11 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
-    username: { type: String, required: true, trim: true },
+    username: { type: String, required: true, unique: true, trim: true, lowercase: true },
     passwordHash: { type: String, required: true },
     role: {
       type: String,
-      enum: ['SUPER_ADMIN', 'TENANT_ADMIN', 'CLUB_MANAGER'],
+      enum: ['ADMIN', 'CLUB_MANAGER'],
       default: 'CLUB_MANAGER',
       required: true,
     },
@@ -35,9 +33,6 @@ const UserSchema = new Schema<IUser>(
   },
   { timestamps: true }
 );
-
-// Compound index to ensure uniqueness of username per tenant
-UserSchema.index({ tenantId: 1, username: 1 }, { unique: true });
 
 export const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

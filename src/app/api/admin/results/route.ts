@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
 import { Result } from '@/lib/models/Result';
 import { EventModel } from '@/lib/models/Event';
 import { recalculateAllClubPoints } from '@/lib/points';
@@ -9,16 +8,15 @@ import { getSession } from '@/lib/auth';
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== 'TENANT_ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get('eventId');
 
-    const filter: any = { tenantId: tenant._id };
+    const filter: any = {};
     if (eventId) filter.eventId = eventId;
 
     const results = await Result.find(filter).populate('eventId');
@@ -31,12 +29,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== 'TENANT_ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
     const body = await req.json();
 
     const { eventId, firstPlace, secondPlace, thirdPlace, notes } = body;
@@ -47,9 +44,8 @@ export async function POST(req: NextRequest) {
 
     // Upsert Result
     const savedResult = await Result.findOneAndUpdate(
-      { tenantId: tenant._id, eventId },
+      { eventId },
       {
-        tenantId: tenant._id,
         eventId,
         firstPlace,
         secondPlace,
@@ -65,7 +61,7 @@ export async function POST(req: NextRequest) {
     await EventModel.findByIdAndUpdate(eventId, { status: 'COMPLETED' });
 
     // Recalculate club point aggregates
-    await recalculateAllClubPoints(tenant._id);
+    await recalculateAllClubPoints();
 
     return NextResponse.json({
       success: true,

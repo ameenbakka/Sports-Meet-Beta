@@ -71,11 +71,7 @@ export default function Navbar({ tenantName, subtitle, onOpenRegisterModal }: Na
 
             {session?.authenticated ? (
               <Link
-                href={
-                  session.user.role === 'TENANT_ADMIN' || session.user.role === 'SUPER_ADMIN'
-                    ? '/admin'
-                    : '/club'
-                }
+                href={session.user.role === 'ADMIN' ? '/admin' : '/club'}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium shadow-sm transition"
               >
                 <UserCheck className="w-4 h-4" />
@@ -134,11 +130,7 @@ export default function Navbar({ tenantName, subtitle, onOpenRegisterModal }: Na
           <div className="pt-2">
             {session?.authenticated ? (
               <Link
-                href={
-                  session.user.role === 'TENANT_ADMIN' || session.user.role === 'SUPER_ADMIN'
-                    ? '/admin'
-                    : '/club'
-                }
+                href={session.user.role === 'ADMIN' ? '/admin' : '/club'}
                 className="block text-center py-2 px-4 rounded-lg bg-blue-600 text-white font-medium text-sm"
               >
                 Go to Dashboard

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
 import { Club } from '@/lib/models/Club';
 import { User } from '@/lib/models/User';
 import { getSession, generateRandomPassword, hashPassword } from '@/lib/auth';
@@ -8,14 +7,12 @@ import { getSession, generateRandomPassword, hashPassword } from '@/lib/auth';
 export async function GET() {
   try {
     const session = await getSession();
-    if (!session || (session.role !== 'TENANT_ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
-
-    const clubs = await Club.find({ tenantId: tenant._id }).sort({ createdAt: -1 });
+    const clubs = await Club.find().sort({ createdAt: -1 });
 
     return NextResponse.json({ clubs });
   } catch (error: any) {
@@ -26,16 +23,15 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== 'TENANT_ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
     const body = await req.json();
     const { action, clubId, pointsAdjustment } = body;
 
-    const club = await Club.findOne({ _id: clubId, tenantId: tenant._id });
+    const club = await Club.findById(clubId);
     if (!club) {
       return NextResponse.json({ error: 'Club not found' }, { status: 404 });
     }
@@ -47,9 +43,8 @@ export async function POST(req: NextRequest) {
 
       // Create or update user account for this club
       await User.findOneAndUpdate(
-        { tenantId: tenant._id, username },
+        { username },
         {
-          tenantId: tenant._id,
           username,
           passwordHash,
           role: 'CLUB_MANAGER',

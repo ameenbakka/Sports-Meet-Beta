@@ -11,7 +11,6 @@ export interface IResultPlacement {
 }
 
 export interface IResult extends Document {
-  tenantId: mongoose.Types.ObjectId;
   eventId: mongoose.Types.ObjectId;
   firstPlace?: IResultPlacement;
   secondPlace?: IResultPlacement;
@@ -38,7 +37,6 @@ const ResultPlacementSchema = new Schema<IResultPlacement>(
 
 const ResultSchema = new Schema<IResult>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
     eventId: { type: Schema.Types.ObjectId, ref: 'Event', required: true, unique: true, index: true },
     firstPlace: { type: ResultPlacementSchema },
     secondPlace: { type: ResultPlacementSchema },

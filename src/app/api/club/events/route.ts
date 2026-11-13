@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
 import { EventModel } from '@/lib/models/Event';
 import { EventRegistration } from '@/lib/models/EventRegistration';
 import { Participant } from '@/lib/models/Participant';
@@ -11,21 +10,20 @@ export async function GET() {
   try {
     const session = await getSession();
     if (!session || !session.clubId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: 'Unauthorized or not a club manager' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
 
     const [events, registrations, myParticipants] = await Promise.all([
-      EventModel.find({ tenantId: tenant._id })
+      EventModel.find()
         .populate('categoryId')
         .sort({ orderIndex: 1, name: 1 })
         .lean(),
-      EventRegistration.find({ tenantId: tenant._id, clubId: session.clubId })
+      EventRegistration.find({ clubId: session.clubId })
         .populate('participantId')
         .lean(),
-      Participant.find({ tenantId: tenant._id, clubId: session.clubId })
+      Participant.find({ clubId: session.clubId })
         .populate('categoryId')
         .lean(),
     ]);
@@ -40,22 +38,20 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
     if (!session || !session.clubId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: 'Unauthorized or not a club manager' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
     const body = await req.json();
     const { eventId, participantId } = body;
 
-    const event = await EventModel.findOne({ _id: eventId, tenantId: tenant._id });
+    const event = await EventModel.findById(eventId);
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
     // Check club participant count for this event
     const currentCount = await EventRegistration.countDocuments({
-      tenantId: tenant._id,
       eventId,
       clubId: session.clubId,
     });
@@ -70,7 +66,6 @@ export async function POST(req: NextRequest) {
     // Verify participant belongs to this club
     const participant = await Participant.findOne({
       _id: participantId,
-      tenantId: tenant._id,
       clubId: session.clubId,
     });
 
@@ -80,7 +75,6 @@ export async function POST(req: NextRequest) {
 
     // Check if already registered
     const existing = await EventRegistration.findOne({
-      tenantId: tenant._id,
       eventId,
       participantId,
     });
@@ -90,7 +84,6 @@ export async function POST(req: NextRequest) {
     }
 
     const reg = await EventRegistration.create({
-      tenantId: tenant._id,
       eventId,
       clubId: session.clubId,
       participantId,
@@ -110,7 +103,6 @@ export async function DELETE(req: NextRequest) {
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
     const { searchParams } = new URL(req.url);
     const regId = searchParams.get('id');
 
@@ -120,7 +112,6 @@ export async function DELETE(req: NextRequest) {
 
     await EventRegistration.findOneAndDelete({
       _id: regId,
-      tenantId: tenant._id,
       clubId: session.clubId,
     });
 

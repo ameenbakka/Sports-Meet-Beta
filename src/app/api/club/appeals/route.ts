@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
 import { Appeal } from '@/lib/models/Appeal';
 import { EventModel } from '@/lib/models/Event';
 import { getSession } from '@/lib/auth';
@@ -10,14 +9,12 @@ export async function GET() {
   try {
     const session = await getSession();
     if (!session || !session.clubId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: 'Unauthorized or not a club manager' }, { status: 403 });
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
 
     const appeals = await Appeal.find({
-      tenantId: tenant._id,
       clubId: session.clubId,
     })
       .populate('eventId')
@@ -25,7 +22,6 @@ export async function GET() {
       .sort({ createdAt: -1 });
 
     const completedEvents = await EventModel.find({
-      tenantId: tenant._id,
       status: 'COMPLETED',
     }).sort({ name: 1 });
 
@@ -43,7 +39,6 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB();
-    const tenant = await getCurrentTenant();
     const body = await req.json();
 
     const { eventId, participantId, subject, description, evidenceUrl } = body;
@@ -56,7 +51,6 @@ export async function POST(req: NextRequest) {
     }
 
     const newAppeal = await Appeal.create({
-      tenantId: tenant._id,
       eventId,
       clubId: session.clubId,
       participantId: participantId || undefined,

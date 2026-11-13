@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
+import { ensureInitialized } from '@/lib/seed';
 import { Club } from '@/lib/models/Club';
 import { EventModel } from '@/lib/models/Event';
 import { Participant } from '@/lib/models/Participant';
@@ -9,25 +9,24 @@ import { Category } from '@/lib/models/Category';
 export async function GET() {
   try {
     await connectDB();
-    const tenant = await getCurrentTenant();
+    const settings = await ensureInitialized();
 
     const [clubs, totalEvents, completedEvents, totalParticipants, categories] = await Promise.all([
-      Club.find({ tenantId: tenant._id, status: 'APPROVED' })
+      Club.find({ status: 'APPROVED' })
         .sort({ totalPoints: -1, goldCount: -1, silverCount: -1, bronzeCount: -1 })
         .lean(),
-      EventModel.countDocuments({ tenantId: tenant._id }),
-      EventModel.countDocuments({ tenantId: tenant._id, status: 'COMPLETED' }),
-      Participant.countDocuments({ tenantId: tenant._id }),
-      Category.find({ tenantId: tenant._id }).sort({ displayOrder: 1 }).lean(),
+      EventModel.countDocuments(),
+      EventModel.countDocuments({ status: 'COMPLETED' }),
+      Participant.countDocuments(),
+      Category.find().sort({ displayOrder: 1 }).lean(),
     ]);
 
     return NextResponse.json({
-      tenant: {
-        id: tenant._id,
-        name: tenant.name,
-        slug: tenant.slug,
-        subtitle: tenant.subtitle,
-        settings: tenant.settings,
+      settings: {
+        name: settings.name,
+        subtitle: settings.subtitle,
+        eventYear: settings.eventYear,
+        defaultPoints: settings.defaultPoints,
       },
       leaderboard: clubs,
       stats: {

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { User } from '@/lib/models/User';
-import { getCurrentTenant } from '@/lib/tenant';
+import { ensureInitialized } from '@/lib/seed';
 import { comparePassword, signToken } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    const tenant = await getCurrentTenant();
+    await ensureInitialized();
+
     const body = await req.json();
     const { username, password } = body;
 
@@ -18,9 +19,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const cleanUsername = username.trim().toLowerCase();
     const user = await User.findOne({
-      tenantId: tenant._id,
-      username: username.trim(),
+      username: cleanUsername,
       isActive: true,
     });
 
@@ -41,7 +42,6 @@ export async function POST(req: NextRequest) {
 
     const sessionPayload = {
       userId: user._id.toString(),
-      tenantId: tenant._id.toString(),
       username: user.username,
       role: user.role,
       clubId: user.clubId ? user.clubId.toString() : undefined,
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({
       success: true,
       user: sessionPayload,
-      redirectUrl: user.role === 'TENANT_ADMIN' || user.role === 'SUPER_ADMIN' ? '/admin' : '/club',
+      redirectUrl: user.role === 'ADMIN' ? '/admin' : '/club',
     });
 
     response.cookies.set('sports_meet_token', token, {

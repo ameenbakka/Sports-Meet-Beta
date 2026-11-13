@@ -43,7 +43,7 @@ export default function LandingPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const tenant = data?.tenant || {
+  const settings = data?.settings || data?.tenant || {
     name: 'ചെറുകാവ് ഗ്രാമപഞ്ചായത്ത് കേരളോത്സവം 2024',
     subtitle: 'Sports & Athletic Meet - Cherukavu Grama Panchayat',
   };
@@ -59,8 +59,8 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col bg-slate-50/70">
       {/* Navigation */}
       <Navbar
-        tenantName={tenant.name}
-        subtitle={tenant.subtitle}
+        tenantName={settings.name}
+        subtitle={settings.subtitle}
         onOpenRegisterModal={() => setIsRegisterModalOpen(true)}
       />
 
@@ -83,11 +83,11 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight max-w-3xl leading-tight text-white mb-3">
-            {tenant.name}
+            {settings.name}
           </h1>
 
           <p className="text-sm sm:text-base text-slate-300 max-w-2xl font-light mb-8">
-            {tenant.subtitle || 'Track real-time points, event rankings, and championship standings.'}
+            {settings.subtitle || 'Track real-time points, event rankings, and championship standings.'}
           </p>
 
           {/* Quick Stat Badges */}
@@ -145,8 +145,8 @@ export default function LandingPage() {
       <footer className="bg-white border-t border-slate-200 py-8 px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <p className="font-semibold text-slate-700">{tenant.name}</p>
-            <p className="text-[11px] text-slate-400">Multi-tenant Sports Championship Platform</p>
+            <p className="font-semibold text-slate-700">{settings.name}</p>
+            <p className="text-[11px] text-slate-400">Sports Meet Championship Platform</p>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <span>Powered by Antigravity SaaS</span>

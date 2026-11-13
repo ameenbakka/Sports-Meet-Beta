@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
 import { Club } from '@/lib/models/Club';
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    const tenant = await getCurrentTenant();
     const body = await req.json();
 
     const { name, code, convenerName, phone, email, place, color } = body;
@@ -20,21 +18,19 @@ export async function POST(req: NextRequest) {
 
     const cleanCode = code.trim().toUpperCase();
 
-    // Check if code or name already registered under this tenant
+    // Check if code or name already registered
     const existing = await Club.findOne({
-      tenantId: tenant._id,
       $or: [{ code: cleanCode }, { name: name.trim() }],
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: 'A club with this Name or Code already exists in this Sports Meet' },
+        { error: 'A club with this Name or Code is already registered' },
         { status: 409 }
       );
     }
 
     const newClub = await Club.create({
-      tenantId: tenant._id,
       name: name.trim(),
       code: cleanCode,
       convenerName: convenerName.trim(),
