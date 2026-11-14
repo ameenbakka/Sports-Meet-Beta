@@ -4,7 +4,7 @@ import { EventModel } from '@/lib/models/Event';
 import { Category } from '@/lib/models/Category';
 import { getSession, isAdminRole } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
     if (!session || !isAdminRole(session.role)) {
@@ -12,12 +12,21 @@ export async function GET() {
     }
 
     await connectDB();
+    const filter: any = {};
+    if (session.tenantId) {
+      filter.tenantId = session.tenantId;
+    } else {
+      const { searchParams } = new URL(req.url);
+      const queryTenantId = searchParams.get('tenantId');
+      if (queryTenantId) filter.tenantId = queryTenantId;
+    }
+
     const [events, categories] = await Promise.all([
-      EventModel.find()
+      EventModel.find(filter)
         .populate('categoryId')
         .sort({ orderIndex: 1, createdAt: -1 })
         .lean(),
-      Category.find().sort({ displayOrder: 1 }).lean(),
+      Category.find(filter).sort({ displayOrder: 1 }).lean(),
     ]);
 
     return NextResponse.json({ events, categories });
@@ -47,7 +56,13 @@ export async function POST(req: NextRequest) {
       status,
       scheduleTime,
       venue,
+      tenantId: bodyTenantId,
     } = body;
+
+    const targetTenantId = session.tenantId || bodyTenantId;
+    if (!targetTenantId) {
+      return NextResponse.json({ error: 'Tenant ID is required' }, { status: 400 });
+    }
 
     if (!name || !categoryId) {
       return NextResponse.json({ error: 'Event name and category are required' }, { status: 400 });
@@ -75,6 +90,7 @@ export async function POST(req: NextRequest) {
 
     // Create
     const created = await EventModel.create({
+      tenantId: targetTenantId,
       name: name.trim(),
       categoryId,
       type: type || 'INDIVIDUAL',

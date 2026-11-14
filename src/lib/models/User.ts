@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export type UserRole = 'ADMIN' | 'CLUB_MANAGER' | 'TENANT_ADMIN' | 'SUPER_ADMIN';
 
 export interface IUser extends Document {
+  tenantId?: mongoose.Types.ObjectId;
   username: string;
   passwordHash: string;
   role: UserRole;
@@ -17,7 +18,8 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    username: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', index: true },
+    username: { type: String, required: true, trim: true, lowercase: true },
     passwordHash: { type: String, required: true },
     role: {
       type: String,
@@ -33,6 +35,9 @@ const UserSchema = new Schema<IUser>(
   },
   { timestamps: true }
 );
+
+// Compound index for unique usernames per tenant
+UserSchema.index({ tenantId: 1, username: 1 }, { unique: true });
 
 export const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

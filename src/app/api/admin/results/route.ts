@@ -17,6 +17,9 @@ export async function GET(req: NextRequest) {
     const eventId = searchParams.get('eventId');
 
     const filter: any = {};
+    if (session.tenantId) {
+      filter.tenantId = session.tenantId;
+    }
     if (eventId) filter.eventId = eventId;
 
     const results = await Result.find(filter).populate('eventId');
@@ -42,10 +45,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
     }
 
-    // Upsert Result
+    const event = await EventModel.findById(eventId);
+    if (!event) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    const tenantId = event.tenantId || session.tenantId;
+
+    // Upsert Result with tenantId
     const savedResult = await Result.findOneAndUpdate(
-      { eventId },
+      { tenantId, eventId },
       {
+        tenantId,
         eventId,
         firstPlace,
         secondPlace,
@@ -60,8 +71,8 @@ export async function POST(req: NextRequest) {
     // Update Event status to COMPLETED
     await EventModel.findByIdAndUpdate(eventId, { status: 'COMPLETED' });
 
-    // Recalculate club point aggregates
-    await recalculateAllClubPoints();
+    // Recalculate club point aggregates for this tenant
+    await recalculateAllClubPoints(tenantId);
 
     return NextResponse.json({
       success: true,

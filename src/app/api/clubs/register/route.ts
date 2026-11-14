@@ -1,11 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Club } from '@/lib/models/Club';
+import { Tenant } from '@/lib/models/Tenant';
+import { getTenantSlugFromHost } from '@/lib/tenant';
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
     const body = await req.json();
+
+    const host = req.headers.get('host') || '';
+    let tenantSlug = req.headers.get('x-tenant-slug') || getTenantSlugFromHost(host) || body.tenantSlug;
+    const queryTenant = req.nextUrl.searchParams.get('tenant');
+    if (queryTenant) {
+      tenantSlug = queryTenant.toLowerCase();
+    }
+
+    if (!tenantSlug) {
+      // If single tenant fallback
+      const defaultTenant = await Tenant.findOne({ status: 'ACTIVE' });
+      if (defaultTenant) {
+        tenantSlug = defaultTenant.slug;
+      }
+    }
+
+    const tenant = await Tenant.findOne({ slug: tenantSlug?.toLowerCase() });
+    if (!tenant) {
+      return NextResponse.json(
+        { error: 'Institution not found. Please register through your institution subdomain (e.g. yourschool.kalolsavam.online).' },
+        { status: 400 }
+      );
+    }
 
     const { name, code, convenerName, phone, email, place, color } = body;
 
@@ -18,19 +43,21 @@ export async function POST(req: NextRequest) {
 
     const cleanCode = code.trim().toUpperCase();
 
-    // Check if code or name already registered
+    // Check if code or name already registered within this tenant
     const existing = await Club.findOne({
+      tenantId: tenant._id,
       $or: [{ code: cleanCode }, { name: name.trim() }],
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: 'A club with this Name or Code is already registered' },
+        { error: 'A club with this Name or Code is already registered for this institution' },
         { status: 409 }
       );
     }
 
     const newClub = await Club.create({
+      tenantId: tenant._id,
       name: name.trim(),
       code: cleanCode,
       convenerName: convenerName.trim(),

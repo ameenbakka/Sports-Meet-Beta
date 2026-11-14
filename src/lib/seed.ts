@@ -1,61 +1,99 @@
 import { connectDB } from './db';
+import { Tenant, ITenant } from './models/Tenant';
 import { MeetSettings } from './models/MeetSettings';
 import { User } from './models/User';
 import { Category } from './models/Category';
 import { hashPassword } from './auth';
+import mongoose from 'mongoose';
 
-export async function ensureInitialized() {
+export async function ensureSuperAdminInitialized() {
   await connectDB();
 
-  // 1. Ensure MeetSettings exist
-  let settings = await MeetSettings.findOne();
-  if (!settings) {
-    settings = await MeetSettings.create({
-      name: 'ചെറുകാവ് ഗ്രാമപഞ്ചായത്ത് കേരളോത്സവം 2024',
-      subtitle: 'Sports & Athletic Championship',
-      eventYear: '2024-25',
-      themeColor: '#2563eb',
-      defaultPoints: { first: 5, second: 3, third: 1 },
-    });
-  }
-
-  // 2. Ensure Admin user exists with role ADMIN and Admin@123 password
-  const existingAdmin = await User.findOne({ username: 'admin' });
-  if (!existingAdmin) {
-    const passwordHash = await hashPassword('Admin@123');
-    await User.create({
-      username: 'admin',
-      name: 'Sports Council Administrator',
-      email: 'admin@sportsmeet.online',
-      role: 'ADMIN',
+  // Check if any SUPER_ADMIN exists
+  let superAdmin = await User.findOne({ role: 'SUPER_ADMIN' });
+  if (!superAdmin) {
+    const passwordHash = await hashPassword('Super@123');
+    superAdmin = await User.create({
+      username: 'superadmin',
+      name: 'Kalolsavam Platform Administrator',
+      email: 'admin@kalolsavam.online',
+      role: 'SUPER_ADMIN',
       passwordHash,
       isActive: true,
     });
-  } else {
-    // If admin already exists from previous multi-tenant schema, normalize to ADMIN
-    if (existingAdmin.role !== 'ADMIN') {
-      existingAdmin.role = 'ADMIN';
-      await existingAdmin.save();
-    }
   }
+  return superAdmin;
+}
 
-  // 3. Ensure Default Categories exist
-  const count = await Category.countDocuments();
+export async function seedTenantDefaultCategories(tenantId: mongoose.Types.ObjectId) {
+  const count = await Category.countDocuments({ tenantId });
   if (count === 0) {
     const defaultCategories = [
-      { name: 'Sub-Junior Boys', code: 'SJB', gender: 'MALE', minAge: 10, maxAge: 12, displayOrder: 1 },
-      { name: 'Sub-Junior Girls', code: 'SJG', gender: 'FEMALE', minAge: 10, maxAge: 12, displayOrder: 2 },
-      { name: 'Junior Boys', code: 'JB', gender: 'MALE', minAge: 13, maxAge: 15, displayOrder: 3 },
-      { name: 'Junior Girls', code: 'JG', gender: 'FEMALE', minAge: 13, maxAge: 15, displayOrder: 4 },
-      { name: 'Senior Boys', code: 'SB', gender: 'MALE', minAge: 16, maxAge: 18, displayOrder: 5 },
-      { name: 'Senior Girls', code: 'SG', gender: 'FEMALE', minAge: 16, maxAge: 18, displayOrder: 6 },
-      { name: 'General / Open', code: 'GEN', gender: 'ALL', minAge: 10, maxAge: 99, displayOrder: 7 },
+      { tenantId, name: 'Sub-Junior Boys', code: 'SJB', gender: 'MALE', minAge: 10, maxAge: 12, displayOrder: 1 },
+      { tenantId, name: 'Sub-Junior Girls', code: 'SJG', gender: 'FEMALE', minAge: 10, maxAge: 12, displayOrder: 2 },
+      { tenantId, name: 'Junior Boys', code: 'JB', gender: 'MALE', minAge: 13, maxAge: 15, displayOrder: 3 },
+      { tenantId, name: 'Junior Girls', code: 'JG', gender: 'FEMALE', minAge: 13, maxAge: 15, displayOrder: 4 },
+      { tenantId, name: 'Senior Boys', code: 'SB', gender: 'MALE', minAge: 16, maxAge: 18, displayOrder: 5 },
+      { tenantId, name: 'Senior Girls', code: 'SG', gender: 'FEMALE', minAge: 16, maxAge: 18, displayOrder: 6 },
+      { tenantId, name: 'General / Open', code: 'GEN', gender: 'ALL', minAge: 10, maxAge: 99, displayOrder: 7 },
     ];
 
     for (const cat of defaultCategories) {
-      await Category.findOneAndUpdate({ code: cat.code }, cat, { upsert: true, new: true });
+      await Category.findOneAndUpdate(
+        { tenantId, code: cat.code },
+        cat,
+        { upsert: true, new: true }
+      );
     }
   }
+}
 
-  return settings;
+export async function ensureInitialized() {
+  await connectDB();
+  await ensureSuperAdminInitialized();
+
+  // If no tenants exist, create a starter tenant "demo" or "cherukavu"
+  const tenantCount = await Tenant.countDocuments();
+  if (tenantCount === 0) {
+    const tenant = await Tenant.create({
+      name: 'ചെറുകാവ് ഗ്രാമപഞ്ചായത്ത് കായികമേള 2026',
+      slug: 'cherukavu',
+      contactEmail: 'sports@kalolsavam.online',
+      contactPhone: '+91 98765 43210',
+      status: 'ACTIVE',
+      settings: {
+        firstPlacePoints: 5,
+        secondPlacePoints: 3,
+        thirdPlacePoints: 1,
+        fourthPlacePoints: 0,
+        themeColor: '#2563eb',
+        meetDates: '2026 Nov 15 - 17',
+        venue: 'Panchayath Stadium, Cherukavu',
+      },
+    });
+
+    await MeetSettings.create({
+      tenantId: tenant._id,
+      name: tenant.name,
+      subtitle: 'Sports & Athletic Championship',
+      eventYear: '2026',
+      themeColor: '#2563eb',
+      contactEmail: tenant.contactEmail,
+      contactPhone: tenant.contactPhone,
+      defaultPoints: { first: 5, second: 3, third: 1 },
+    });
+
+    const tenantAdminHash = await hashPassword('Admin@123');
+    await User.create({
+      tenantId: tenant._id,
+      username: 'admin',
+      name: 'Cherukavu Sports Admin',
+      email: 'admin@kalolsavam.online',
+      role: 'ADMIN',
+      passwordHash: tenantAdminHash,
+      isActive: true,
+    });
+
+    await seedTenantDefaultCategories(tenant._id as mongoose.Types.ObjectId);
+  }
 }

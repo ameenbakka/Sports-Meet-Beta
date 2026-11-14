@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
 import { Club } from '@/lib/models/Club';
-import { ensureInitialized } from '@/lib/seed';
+import { Tenant } from '@/lib/models/Tenant';
+import { MeetSettings } from '@/lib/models/MeetSettings';
 
 export async function GET() {
   try {
@@ -11,14 +12,18 @@ export async function GET() {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
+    let tenant = null;
     let settings = null;
     let club = null;
 
     try {
       await connectDB();
-      settings = await ensureInitialized();
+      if (session.tenantId) {
+        tenant = await Tenant.findById(session.tenantId).lean();
+        settings = await MeetSettings.findOne({ tenantId: session.tenantId }).lean();
+      }
       if (session.clubId) {
-        club = await Club.findById(session.clubId);
+        club = await Club.findById(session.clubId).lean();
       }
     } catch (dbErr) {
       console.error('Database warning in /api/auth/me:', dbErr);
@@ -27,10 +32,11 @@ export async function GET() {
     return NextResponse.json({
       authenticated: true,
       user: session,
-      settings: {
-        name: settings?.name || 'ചെറുകാവ് ഗ്രാമപഞ്ചായത്ത് കേരളോത്സവം 2024',
-        subtitle: settings?.subtitle || 'Sports & Athletic Championship',
-        eventYear: settings?.eventYear || '2024-25',
+      tenant,
+      settings: settings || {
+        name: tenant?.name || 'Sports & Athletic Championship',
+        subtitle: 'Sports Meet Management Portal',
+        eventYear: '2026',
       },
       club,
     });

@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export type AppealStatus = 'PENDING' | 'INVESTIGATING' | 'RESOLVED_ACCEPTED' | 'RESOLVED_REJECTED';
 
 export interface IAppeal extends Document {
+  tenantId: mongoose.Types.ObjectId;
   eventId: mongoose.Types.ObjectId;
   clubId: mongoose.Types.ObjectId;
   participantId?: mongoose.Types.ObjectId;
@@ -19,6 +20,7 @@ export interface IAppeal extends Document {
 
 const AppealSchema = new Schema<IAppeal>(
   {
+    tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
     eventId: { type: Schema.Types.ObjectId, ref: 'Event', required: true, index: true },
     clubId: { type: Schema.Types.ObjectId, ref: 'Club', required: true, index: true },
     participantId: { type: Schema.Types.ObjectId, ref: 'Participant' },
@@ -37,6 +39,8 @@ const AppealSchema = new Schema<IAppeal>(
   },
   { timestamps: true }
 );
+
+AppealSchema.index({ tenantId: 1, status: 1 });
 
 export const Appeal: Model<IAppeal> =
   mongoose.models.Appeal || mongoose.model<IAppeal>('Appeal', AppealSchema);

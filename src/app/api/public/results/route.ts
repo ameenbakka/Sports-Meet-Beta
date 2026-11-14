@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Result } from '@/lib/models/Result';
+import { Tenant } from '@/lib/models/Tenant';
+import { getTenantSlugFromHost } from '@/lib/tenant';
 import '@/lib/models/Event';
 import '@/lib/models/Category';
 import '@/lib/models/Club';
@@ -13,7 +15,24 @@ export async function GET(req: NextRequest) {
     const categoryId = searchParams.get('categoryId');
     const query = searchParams.get('query')?.toLowerCase();
 
-    const results = await Result.find({ status: 'PUBLISHED' })
+    // Resolve tenant
+    const host = req.headers.get('host') || '';
+    let tenantSlug = req.headers.get('x-tenant-slug') || getTenantSlugFromHost(host);
+    const queryTenant = searchParams.get('tenant');
+    if (queryTenant) {
+      tenantSlug = queryTenant.toLowerCase();
+    }
+
+    const filter: any = { status: 'PUBLISHED' };
+
+    if (tenantSlug) {
+      const tenant = await Tenant.findOne({ slug: tenantSlug.toLowerCase() });
+      if (tenant) {
+        filter.tenantId = tenant._id;
+      }
+    }
+
+    const results = await Result.find(filter)
       .populate({
         path: 'eventId',
         populate: { path: 'categoryId' },

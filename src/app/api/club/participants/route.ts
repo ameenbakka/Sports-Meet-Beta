@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Participant } from '@/lib/models/Participant';
 import { Category } from '@/lib/models/Category';
+import { Club } from '@/lib/models/Club';
 import { getSession } from '@/lib/auth';
 
 export async function GET() {
@@ -12,12 +13,14 @@ export async function GET() {
     }
 
     await connectDB();
+    const club = await Club.findById(session.clubId);
+    const tenantId = session.tenantId || club?.tenantId;
 
     const [participants, categories] = await Promise.all([
       Participant.find({ clubId: session.clubId })
         .populate('categoryId')
         .sort({ chestNumber: 1 }),
-      Category.find().sort({ displayOrder: 1 }),
+      Category.find(tenantId ? { tenantId } : {}).sort({ displayOrder: 1 }),
     ]);
 
     return NextResponse.json({ participants, categories });
@@ -34,8 +37,10 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB();
-    const body = await req.json();
+    const club = await Club.findById(session.clubId);
+    const tenantId = session.tenantId || club?.tenantId;
 
+    const body = await req.json();
     const { id, name, chestNumber, categoryId, gender, dob, phone } = body;
 
     if (!name || !chestNumber || !categoryId || !gender) {
@@ -47,15 +52,16 @@ export async function POST(req: NextRequest) {
 
     const cleanChestNo = chestNumber.trim().toUpperCase();
 
-    // Check if chest number is unique
+    // Check if chest number is unique within this tenant
     const existing = await Participant.findOne({
+      tenantId,
       chestNumber: cleanChestNo,
       _id: { $ne: id },
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: `Chest number ${cleanChestNo} is already assigned to another participant` },
+        { error: `Chest number ${cleanChestNo} is already assigned to another participant in this meet` },
         { status: 409 }
       );
     }
@@ -79,6 +85,7 @@ export async function POST(req: NextRequest) {
 
     // Create
     const created = await Participant.create({
+      tenantId,
       clubId: session.clubId,
       categoryId,
       name: name.trim(),

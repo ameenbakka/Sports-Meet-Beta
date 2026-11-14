@@ -14,7 +14,12 @@ export async function GET() {
     }
 
     await connectDB();
-    const appeals = await Appeal.find()
+    const filter: any = {};
+    if (session.tenantId) {
+      filter.tenantId = session.tenantId;
+    }
+
+    const appeals = await Appeal.find(filter)
       .populate('eventId')
       .populate('clubId')
       .populate('participantId')

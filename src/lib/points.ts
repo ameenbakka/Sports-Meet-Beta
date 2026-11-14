@@ -1,15 +1,25 @@
 import { Club } from './models/Club';
 import { Result } from './models/Result';
+import mongoose from 'mongoose';
 
-export async function recalculateAllClubPoints() {
-  // 1. Reset all clubs to 0 points and 0 medal counts
+export async function recalculateAllClubPoints(tenantId?: string | mongoose.Types.ObjectId) {
+  const filter: any = {};
+  if (tenantId) {
+    filter.tenantId = tenantId;
+  }
+
+  // 1. Reset matching clubs to 0 points and 0 medal counts
   await Club.updateMany(
-    {},
+    filter,
     { $set: { totalPoints: 0, goldCount: 0, silverCount: 0, bronzeCount: 0 } }
   );
 
-  // 2. Fetch all published results
-  const results = await Result.find({ status: 'PUBLISHED' });
+  // 2. Fetch published results for tenant
+  const resultFilter: any = { status: 'PUBLISHED' };
+  if (tenantId) {
+    resultFilter.tenantId = tenantId;
+  }
+  const results = await Result.find(resultFilter);
 
   // 3. Accumulate points per club
   const clubStats: Record<string, { total: number; gold: number; silver: number; bronze: number }> = {};

@@ -4,7 +4,7 @@ import { Club } from '@/lib/models/Club';
 import { User } from '@/lib/models/User';
 import { getSession, generateRandomPassword, hashPassword, isAdminRole } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
     if (!session || !isAdminRole(session.role)) {
@@ -12,7 +12,16 @@ export async function GET() {
     }
 
     await connectDB();
-    const clubs = await Club.find().sort({ createdAt: -1 });
+    const filter: any = {};
+    if (session.tenantId) {
+      filter.tenantId = session.tenantId;
+    } else {
+      const { searchParams } = new URL(req.url);
+      const queryTenantId = searchParams.get('tenantId');
+      if (queryTenantId) filter.tenantId = queryTenantId;
+    }
+
+    const clubs = await Club.find(filter).sort({ createdAt: -1 });
 
     return NextResponse.json({ clubs });
   } catch (error: any) {
@@ -41,10 +50,11 @@ export async function POST(req: NextRequest) {
       const plainPassword = generateRandomPassword(8);
       const passwordHash = await hashPassword(plainPassword);
 
-      // Create or update user account for this club
+      // Create or update user account for this club with tenantId
       await User.findOneAndUpdate(
-        { username },
+        { tenantId: club.tenantId, username },
         {
+          tenantId: club.tenantId,
           username,
           passwordHash,
           role: 'CLUB_MANAGER',
@@ -66,32 +76,28 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Club approved and credentials created',
         credentials: {
           username,
           password: plainPassword,
+          clubName: club.name,
         },
-        club,
       });
     }
 
     if (action === 'REJECT') {
       club.status = 'REJECTED';
       await club.save();
-      return NextResponse.json({ success: true, message: 'Club rejected', club });
+      return NextResponse.json({ success: true, club });
     }
 
     if (action === 'ADJUST_POINTS') {
-      if (typeof pointsAdjustment === 'number') {
-        club.totalPoints = Math.max(0, club.totalPoints + pointsAdjustment);
-        await club.save();
-      }
+      club.totalPoints = Math.max(0, (club.totalPoints || 0) + Number(pointsAdjustment || 0));
+      await club.save();
       return NextResponse.json({ success: true, club });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error: any) {
-    console.error('Admin club action error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

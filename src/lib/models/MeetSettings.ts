@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IMeetSettings extends Document {
+  tenantId: mongoose.Types.ObjectId;
   name: string;
   subtitle: string;
   eventYear: string;
@@ -18,12 +19,13 @@ export interface IMeetSettings extends Document {
 
 const MeetSettingsSchema = new Schema<IMeetSettings>(
   {
-    name: { type: String, default: 'ചെറുകാവ് ഗ്രാമപഞ്ചായത്ത് കേരളോത്സവം 2024' },
-    subtitle: { type: String, default: 'Annual Sports & Athletic Championship' },
-    eventYear: { type: String, default: '2024-25' },
+    tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, unique: true, index: true },
+    name: { type: String, default: 'Annual Sports & Athletic Championship' },
+    subtitle: { type: String, default: 'Sports Meet Management Portal' },
+    eventYear: { type: String, default: '2026' },
     themeColor: { type: String, default: '#2563eb' },
-    contactEmail: { type: String, default: 'sports@keralotsavam.online' },
-    contactPhone: { type: String, default: '+91 98765 43210' },
+    contactEmail: { type: String, default: 'admin@kalolsavam.online' },
+    contactPhone: { type: String, default: '' },
     defaultPoints: {
       first: { type: Number, default: 5 },
       second: { type: Number, default: 3 },

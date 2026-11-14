@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import { EventModel } from '@/lib/models/Event';
 import { EventRegistration } from '@/lib/models/EventRegistration';
 import { Participant } from '@/lib/models/Participant';
+import { Club } from '@/lib/models/Club';
 import { getSession } from '@/lib/auth';
 import '@/lib/models/Category';
 
@@ -14,9 +15,11 @@ export async function GET() {
     }
 
     await connectDB();
+    const club = await Club.findById(session.clubId);
+    const tenantId = session.tenantId || club?.tenantId;
 
     const [events, registrations, myParticipants] = await Promise.all([
-      EventModel.find()
+      EventModel.find(tenantId ? { tenantId } : {})
         .populate('categoryId')
         .sort({ orderIndex: 1, name: 1 })
         .lean(),
@@ -42,6 +45,9 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB();
+    const club = await Club.findById(session.clubId);
+    const tenantId = session.tenantId || club?.tenantId;
+
     const body = await req.json();
     const { eventId, participantId } = body;
 
@@ -84,6 +90,7 @@ export async function POST(req: NextRequest) {
     }
 
     const reg = await EventRegistration.create({
+      tenantId: tenantId || event.tenantId,
       eventId,
       clubId: session.clubId,
       participantId,

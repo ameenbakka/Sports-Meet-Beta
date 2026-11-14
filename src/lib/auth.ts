@@ -11,6 +11,8 @@ export interface AuthSession {
   role: UserRole;
   clubId?: string;
   name: string;
+  tenantId?: string;
+  tenantSlug?: string;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -42,6 +44,10 @@ export async function getSession(): Promise<AuthSession | null> {
 
 export function isAdminRole(role?: string): boolean {
   return role === 'ADMIN' || role === 'TENANT_ADMIN' || role === 'SUPER_ADMIN';
+}
+
+export function isSuperAdmin(role?: string): boolean {
+  return role === 'SUPER_ADMIN';
 }
 
 export function generateRandomPassword(length = 8): string {
